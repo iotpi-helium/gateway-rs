@@ -1,16 +1,18 @@
 pub mod cmd;
 pub mod curl;
+pub mod dispatcher;
 pub mod error;
 pub mod gateway;
 pub mod keyed_uri;
 pub mod keypair;
+pub mod lora_throttle;
 pub mod packet;
+pub mod poc;
 pub mod region;
 pub mod router;
 pub mod server;
 pub mod service;
 pub mod settings;
-pub mod state_channel;
 pub mod sync;
 pub mod updater;
 

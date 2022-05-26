@@ -1,4 +1,4 @@
-use crate::{state_channel::StateChannel, CacheSettings, Packet, Result};
+use crate::{router::state_channel::StateChannel, CacheSettings, Packet, Result};
 use std::{
     collections::{hash_map::Values, HashMap, VecDeque},
     ops::Deref,
@@ -114,12 +114,12 @@ impl RouterStore {
         before_len - self.queued_packets.len()
     }
 
-    pub fn get_state_channel_entry(&self, sk: &[u8]) -> Option<&StateChannelEntry> {
-        self.state_channels.get(&sk.to_vec())
+    pub fn get_state_channel_entry(&self, sk: &Vec<u8>) -> Option<&StateChannelEntry> {
+        self.state_channels.get(sk)
     }
 
-    pub fn get_state_channel_entry_mut(&mut self, sk: &[u8]) -> Option<&mut StateChannelEntry> {
-        self.state_channels.get_mut(&sk.to_vec())
+    pub fn get_state_channel_entry_mut(&mut self, sk: &Vec<u8>) -> Option<&mut StateChannelEntry> {
+        self.state_channels.get_mut(sk)
     }
 
     pub fn state_channel_entries(&self) -> Values<'_, Vec<u8>, StateChannelEntry> {

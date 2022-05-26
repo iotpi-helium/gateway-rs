@@ -85,6 +85,8 @@ pub struct UpdateSettings {
 pub struct CacheSettings {
     // Maximum number of packets to queue up per router client
     pub max_packets: u16,
+    // Maximum number of poc challenges to queue
+    pub max_challenges: u16,
 }
 
 impl Settings {

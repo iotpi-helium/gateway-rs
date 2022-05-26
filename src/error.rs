@@ -1,4 +1,5 @@
-use crate::state_channel;
+use crate::router::state_channel;
+use helium_proto::GatewayErrorResp;
 use std::net;
 use thiserror::Error;
 
@@ -14,6 +15,8 @@ pub enum Error {
     IO(#[from] std::io::Error),
     #[error("crypto error")]
     CryptoError(#[from] helium_crypto::Error),
+    #[error("onion error")]
+    Onion(OnionError),
     #[error("encode error")]
     Encode(#[from] EncodeError),
     #[error("decode error")]
@@ -40,6 +43,8 @@ pub enum DecodeError {
     Uri(#[from] http::uri::InvalidUri),
     #[error("keypair uri: {0}")]
     KeypairUri(String),
+    #[error("keyed uri: {0}")]
+    KeyedUri(String),
     #[error("json decode")]
     Json(#[from] serde_json::Error),
     #[error("base64 decode")]
@@ -72,10 +77,24 @@ pub enum ServiceError {
     Channel,
     #[error("no service")]
     NoService,
+    #[error("remote {0}")]
+    Remote(String),
     #[error("block age {block_age}s > {max_age}s")]
     Check { block_age: u64, max_age: u64 },
     #[error("Unable to connect to local server. Check that `helium_gateway` is running.")]
     LocalClientConnect(helium_proto::services::Error),
+}
+
+#[derive(Error, Debug)]
+pub enum OnionError {
+    #[error("invalid onion size")]
+    InvalidSize(usize),
+    #[error("no region params available")]
+    NoRegionParams,
+    #[error("invalid onion key")]
+    InvalidKey,
+    #[error("decrypt failure")]
+    CryptoError,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -133,6 +152,12 @@ macro_rules! from_err {
 from_err!(ServiceError, helium_proto::services::Error);
 from_err!(ServiceError, tonic::Status);
 
+impl From<GatewayErrorResp> for Error {
+    fn from(v: GatewayErrorResp) -> Self {
+        ServiceError::remote(String::from_utf8_lossy(&v.error))
+    }
+}
+
 impl<T> From<tokio::sync::mpsc::error::SendError<T>> for Error {
     fn from(_err: tokio::sync::mpsc::error::SendError<T>) -> Self {
         Self::Service(ServiceError::Stream)
@@ -167,6 +192,10 @@ impl DecodeError {
 
     pub fn keypair_uri<T: ToString>(msg: T) -> Error {
         Error::Decode(DecodeError::KeypairUri(msg.to_string()))
+    }
+
+    pub fn keyed_uri<T: ToString>(msg: T) -> Error {
+        Error::Decode(DecodeError::KeyedUri(msg.to_string()))
     }
 }
 
@@ -220,6 +249,34 @@ impl StateChannelError {
     }
 }
 
+impl OnionError {
+    pub fn invalid_size(seen: usize) -> Error {
+        Error::Onion(OnionError::InvalidSize(seen))
+    }
+
+    pub fn invalid_key() -> Error {
+        Error::Onion(OnionError::InvalidKey)
+    }
+
+    pub fn crypto_error() -> Error {
+        Error::Onion(OnionError::CryptoError)
+    }
+
+    pub fn no_region_params() -> Error {
+        Error::Onion(OnionError::NoRegionParams)
+    }
+}
+
+impl ServiceError {
+    pub fn remote<T: ToString>(msg: T) -> Error {
+        Error::Service(Self::Remote(msg.to_string()))
+    }
+
+    pub fn no_service() -> Error {
+        Error::Service(Self::NoService)
+    }
+}
+
 impl Error {
     /// Use as for custom or rare errors that don't quite deserve their own
     /// error
@@ -229,10 +286,6 @@ impl Error {
 
     pub fn channel() -> Error {
         Error::Service(ServiceError::Channel)
-    }
-
-    pub fn no_service() -> Error {
-        Error::Service(ServiceError::NoService)
     }
 
     pub fn local_client_connect(e: helium_proto::services::Error) -> Error {

@@ -27,6 +27,7 @@ http-serde = "1"
 tokio = { version = "1", default-features=false, features=["fs", "macros", "signal", "rt", "process", "time"] }
 tokio-stream = {version = "0", features = ["fs"] }
 futures = "*"
+futures-util = "*"
 triggered = "0.1"
 slog = "2"
 slog-async = "2"
@@ -49,6 +50,9 @@ sha2 = "0"
 signature = "*"
 async-trait = "0"
 angry-purple-tiger = "0"
+aes-gcm = "0"
+ghash = "*"
+ctr = "*"
 lorawan = { package = "lorawan", path = "lorawan" }
 exponential-backoff = {git = "https://github.com/yoshuawuyts/exponential-backoff", branch = "master"}
 semtech-udp = { version = ">=0.9.4,<1", default-features=false, features=["server"] }
@@ -65,3 +69,7 @@ panic = "abort"
 #strip = "debuginfo"
 strip = "symbols"
 
+
+[dev-dependencies]
+hex = "0"
+hex-literal = "0"

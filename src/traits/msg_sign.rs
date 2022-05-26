@@ -2,8 +2,9 @@ use crate::{Error, Keypair, Result};
 use futures::TryFutureExt;
 use helium_crypto::Sign;
 use helium_proto::{
-    BlockchainStateChannelOfferV1, BlockchainStateChannelPacketV1, BlockchainTxnAddGatewayV1,
-    BlockchainTxnStateChannelCloseV1, GatewayRegionParamsUpdateReqV1, Message,
+    BlockchainPocWitnessV1, BlockchainStateChannelOfferV1, BlockchainStateChannelPacketV1,
+    BlockchainTxnAddGatewayV1, BlockchainTxnStateChannelCloseV1,
+    GatewayPocCheckChallengeTargetReqV1, GatewayPocReqV1, GatewayRegionParamsUpdateReqV1, Message,
 };
 
 #[async_trait::async_trait]
@@ -33,9 +34,12 @@ macro_rules! impl_msg_sign {
 }
 
 impl_msg_sign!(GatewayRegionParamsUpdateReqV1, signature);
+impl_msg_sign!(GatewayPocReqV1, signature);
+impl_msg_sign!(GatewayPocCheckChallengeTargetReqV1, challengee_sig);
 impl_msg_sign!(BlockchainStateChannelPacketV1, signature);
 impl_msg_sign!(BlockchainStateChannelOfferV1, signature);
 impl_msg_sign!(BlockchainTxnStateChannelCloseV1, signature);
+impl_msg_sign!(BlockchainPocWitnessV1, signature);
 impl_msg_sign!(
     BlockchainTxnAddGatewayV1,
     owner_signature,

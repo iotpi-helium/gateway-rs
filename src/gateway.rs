@@ -1,4 +1,4 @@
-use crate::{router::dispatcher, Error, Packet, Result, Settings};
+use crate::{dispatcher, Error, Packet, Result, Settings};
 use futures::TryFutureExt;
 use semtech_udp::{
     server_runtime::{Error as SemtechError, Event, UdpRuntime},
@@ -99,10 +99,13 @@ impl Gateway {
                 info!(logger, "disconnected packet forwarder: {mac}, {addr}")
             }
             Event::PacketReceived(rxpk, _gateway_mac) => match Packet::try_from(rxpk) {
-                Ok(packet) if packet.is_longfi() => {
-                    info!(logger, "ignoring longfi packet");
+                Ok(mut packet) => {
+                    if packet.poc_payload().is_some() {
+                        self.handle_poc_packet(logger, packet).await;
+                    } else {
+                        self.handle_uplink(logger, packet).await;
+                    }
                 }
-                Ok(packet) => self.handle_uplink(logger, packet).await,
                 Err(err) => {
                     warn!(logger, "ignoring push_data: {err:?}");
                 }
@@ -120,6 +123,13 @@ impl Gateway {
     async fn handle_uplink(&mut self, logger: &Logger, packet: Packet) {
         info!(logger, "uplink {} from {}", packet, self.downlink_mac);
         match self.uplinks.uplink(packet).await {
+            Ok(()) => (),
+            Err(err) => warn!(logger, "ignoring uplink error {:?}", err),
+        }
+    }
+
+    async fn handle_poc_packet(&mut self, logger: &Logger, packet: Packet) {
+        match self.uplinks.poc_packet(packet).await {
             Ok(()) => (),
             Err(err) => warn!(logger, "ignoring uplink error {:?}", err),
         }

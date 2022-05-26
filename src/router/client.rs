@@ -1,13 +1,15 @@
 use crate::{
-    error::{Error, StateChannelError},
+    error::{Error, ServiceError, StateChannelError},
     gateway,
-    router::{QuePacket, RouterStore, StateChannelEntry},
-    service::router::{RouterService, StateChannelService},
+    router::{
+        state_channel::{check_active, check_active_diff, StateChannel, StateChannelMessage},
+        QuePacket, RouterStore, StateChannelEntry,
+    },
     service::{
         self,
         gateway::{GatewayService, StateChannelFollowService},
+        router::{RouterService, StateChannelService},
     },
-    state_channel::{check_active, check_active_diff, StateChannel, StateChannelMessage},
     Base64, CacheSettings, KeyedUri, Keypair, MsgSign, Packet, Region, Result, TxnFee,
     TxnFeeConfig,
 };
@@ -289,7 +291,7 @@ impl RouterClient {
                     .inspect_err(|err| warn!(logger, "ignoring gateway close_sc error: {:?}", err))
                     .await;
             } else {
-                return Err(Error::no_service());
+                return Err(ServiceError::no_service());
             }
         }
         Ok(())
@@ -443,7 +445,7 @@ impl RouterClient {
                 .and_then(|prev_sc| prev_sc.is_valid_purchase_sc(public_key, packet, sc))
                 .map(Some)
         } else {
-            Err(Error::no_service())
+            Err(ServiceError::no_service())
         }
     }
 

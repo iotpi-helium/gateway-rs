@@ -3,7 +3,7 @@ use helium_proto::{
     services::{self, Channel, Endpoint},
     BlockchainStateChannelMessageV1,
 };
-use tokio::{sync::mpsc, time::Duration};
+use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 
 type RouterClient = services::router::RouterClient<Channel>;
@@ -101,7 +101,7 @@ impl StateChannelService {
 impl RouterService {
     pub fn new(keyed_uri: KeyedUri) -> Result<Self> {
         let router_channel = Endpoint::from(keyed_uri.uri.clone())
-            .timeout(Duration::from_secs(CONNECT_TIMEOUT))
+            .timeout(CONNECT_TIMEOUT)
             .connect_lazy();
         let state_channel = router_channel.clone();
         Ok(Self {

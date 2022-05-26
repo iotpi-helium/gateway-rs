@@ -3,8 +3,8 @@ use super::{
     HeightReq, HeightRes, PubkeyReq, PubkeyRes, RegionReq, RegionRes, SignReq, SignRes,
 };
 use crate::{
-    router::dispatcher, settings::StakingMode, Error, Keypair, PublicKey, Result, Settings,
-    TxnEnvelope, TxnFee, TxnFeeConfig, CONFIG_FEE_KEYS,
+    dispatcher, settings::StakingMode, Error, Keypair, PublicKey, Result, Settings, TxnEnvelope,
+    TxnFee, TxnFeeConfig, CONFIG_FEE_KEYS,
 };
 use futures::TryFutureExt;
 use helium_crypto::Sign;

@@ -1,5 +1,7 @@
 use crate::{Error, Result};
-use helium_proto::Region as ProtoRegion;
+use helium_proto::{
+    BlockchainRegionParamsV1, Region as ProtoRegion, RegionSpreading, TaggedSpreading,
+};
 use serde::{de, Deserialize, Deserializer};
 use std::fmt;
 
@@ -9,6 +11,12 @@ pub struct Region(ProtoRegion);
 impl From<Region> for ProtoRegion {
     fn from(v: Region) -> Self {
         v.0
+    }
+}
+
+impl AsRef<ProtoRegion> for Region {
+    fn as_ref(&self) -> &ProtoRegion {
+        &self.0
     }
 }
 
@@ -98,4 +106,60 @@ impl Region {
             .map(Self)
             .ok_or_else(|| Error::custom(format!("unsupported region {v}")))
     }
+}
+
+#[derive(Debug)]
+pub struct RegionParams(BlockchainRegionParamsV1);
+
+impl AsRef<BlockchainRegionParamsV1> for RegionParams {
+    fn as_ref(&self) -> &BlockchainRegionParamsV1 {
+        &self.0
+    }
+}
+
+impl RegionParams {
+    pub fn max_eirp(&self) -> Option<u32> {
+        self.0.region_params.iter().map(|p| p.max_eirp).max()
+    }
+
+    pub fn bandwidth(&self) -> Option<u32> {
+        // The bandwidth does not change per channel frequency, so just get one
+        self.0.region_params.first().map(|p| p.bandwidth)
+    }
+
+    pub fn spreading(&self, packet_size: u32) -> Option<&'static str> {
+        // The spreading does not change per channel frequency, so just get one
+        // and do selection depending on max_packet_size
+        self.0
+            .region_params
+            .first()
+            .and_then(|param| param.spreading.as_ref())
+            .map(|spreading| &spreading.tagged_spreading)
+            .and_then(|tagged_spreading| {
+                tagged_spreading
+                    .iter()
+                    .find(|ts| ts.max_packet_size >= packet_size)
+            })
+            .and_then(spreading_to_str)
+    }
+
+    pub fn datarate(&self, packet_size: u32) -> Option<String> {
+        self.spreading(packet_size).and_then(|spreading| {
+            self.bandwidth()
+                .map(|bw| (bw / 1000) as u32)
+                .map(|bk| format!("{spreading}BW{bk}"))
+        })
+    }
+}
+
+fn spreading_to_str(spreading: &TaggedSpreading) -> Option<&'static str> {
+    RegionSpreading::from_i32(spreading.region_spreading).and_then(|rs| match rs {
+        RegionSpreading::Sf7 => Some("SF7"),
+        RegionSpreading::Sf8 => Some("SF8"),
+        RegionSpreading::Sf9 => Some("SF9"),
+        RegionSpreading::Sf10 => Some("SF10"),
+        RegionSpreading::Sf11 => Some("SF11"),
+        RegionSpreading::Sf12 => Some("SF12"),
+        RegionSpreading::SfInvalid => None,
+    })
 }

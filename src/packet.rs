@@ -10,7 +10,12 @@ use semtech_udp::{
     CodingRate, DataRate, Modulation, StringOrNum,
 };
 use sha2::{Digest, Sha256};
-use std::{convert::TryFrom, fmt, ops::Deref, str::FromStr};
+use std::{
+    convert::TryFrom,
+    fmt,
+    ops::{Deref, DerefMut},
+    str::FromStr,
+};
 
 #[derive(Debug, Clone)]
 pub struct Packet(helium_proto::Packet);
@@ -20,6 +25,12 @@ impl Deref for Packet {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for Packet {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -76,11 +87,18 @@ impl From<helium_proto::Packet> for Packet {
 impl Packet {
     pub fn routing(&self) -> &Option<RoutingInformation> {
         &self.0.routing
-    }
+    }   
 
-    pub fn is_longfi(&self) -> bool {
-        let mut decoded = [0xFE, 65];
-        longfi::Datagram::decode(&self.0.payload, &mut decoded).is_ok()
+    pub fn poc_payload(&mut self) -> Option<longfi::Datagram> {
+        let mut buf = vec![0_u8; self.0.payload.len()];
+        match longfi::Datagram::decode(&self.0.payload, &mut buf) {
+            Ok((decoded_len, datagram)) => {
+                buf.resize(decoded_len, 0);
+                self.0.payload = buf;
+                Some(datagram)
+            }
+            Err(_) => None,
+        }
     }
 
     pub fn to_packet(self) -> helium_proto::Packet {

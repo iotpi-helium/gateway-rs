@@ -1,4 +1,4 @@
-use crate::{PublicKey, Result};
+use crate::{error::DecodeError, PublicKey, Result};
 use http::Uri;
 use serde::Deserialize;
 use std::{
@@ -66,5 +66,15 @@ impl TryFrom<helium_proto::RoutingAddress> for KeyedUri {
             pubkey: Arc::new(helium_crypto::PublicKey::from_bytes(v.pub_key)?),
         };
         Ok(result)
+    }
+}
+
+impl TryFrom<helium_proto::GatewayPublicRoutingDataRespV1> for KeyedUri {
+    type Error = crate::Error;
+    fn try_from(v: helium_proto::GatewayPublicRoutingDataRespV1) -> Result<Self> {
+        let routing_address = v
+            .public_uri
+            .ok_or_else(|| DecodeError::keyed_uri("no routing address"))?;
+        Self::try_from(routing_address)
     }
 }

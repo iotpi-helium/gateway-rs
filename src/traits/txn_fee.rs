@@ -1,7 +1,8 @@
 use crate::{
     api::{ConfigValue, LocalClient},
+    impl_to_value,
     settings::StakingMode,
-    Error, Result, TxnEnvelope,
+    Error, Result, ToValue, TxnEnvelope,
 };
 use helium_proto::{BlockchainTxnAddGatewayV1, BlockchainTxnStateChannelCloseV1, Message};
 use serde_derive::Deserialize;
@@ -153,34 +154,5 @@ impl TryFrom<Vec<ConfigValue>> for TxnFeeConfig {
     }
 }
 
-trait ToValue<T> {
-    fn to_value(&self) -> Result<T>;
-}
-
-impl ToValue<bool> for ConfigValue {
-    fn to_value(&self) -> Result<bool> {
-        let name = &self.name;
-        if self.r#type != "atom" {
-            return Err(Error::custom(format!("not a boolean variable: {name}",)));
-        }
-        let value = std::str::from_utf8(&self.value)
-            .map_err(|_| Error::custom(format!("not a boolean value: {name}")))?;
-        Ok(value == "true")
-    }
-}
-
-impl ToValue<u64> for ConfigValue {
-    fn to_value(&self) -> Result<u64> {
-        let name = &self.name;
-        if self.r#type != "int" {
-            return Err(Error::custom(format!("not an int variable: {name}")));
-        }
-        let value = std::str::from_utf8(&self.value)
-            .map_err(|_| Error::custom(format!("not an valid value: {name}")))
-            .and_then(|v| {
-                v.parse::<u64>()
-                    .map_err(|_| Error::custom(format!("not a valid int value: {name}")))
-            })?;
-        Ok(value)
-    }
-}
+impl_to_value!(bool, "atom", ConfigValue);
+impl_to_value!(u64, "int", ConfigValue);
