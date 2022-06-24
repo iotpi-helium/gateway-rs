@@ -1,5 +1,5 @@
 use crate::*;
-use helium_crypto::{ecc608, KeyTag, KeyType, Network};
+use helium_crypto::{ecc608, tee, KeyTag, KeyType, Network};
 use http::Uri;
 use rand::rngs::OsRng;
 use serde::{de, Deserializer};
@@ -91,6 +91,11 @@ impl FromStr for Keypair {
                                 uri_error!("could not load ecc keypair in slot {slot}: {err:?}")
                             })
                     })?;
+                Ok(keypair.into())
+            }
+            Some("tz") => {
+                let keypair = tee::Keypair::keypair();
+                let keypair = helium_crypto::Keypair::from(keypair);
                 Ok(keypair.into())
             }
             Some(unknown) => Err(uri_error!("unkown keypair scheme: \"{unknown}\"")),
