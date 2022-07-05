@@ -54,8 +54,7 @@ rust_decimal = {version = "1", features = ["serde-with-float"]}
 exponential-backoff = {git = "https://github.com/yoshuawuyts/exponential-backoff", branch = "master"}
 semtech-udp = { version = ">=0.9.4,<1", default-features=false, features=["server"] }
 helium-proto = { git = "https://github.com/helium/proto", branch="master", features=["services"]}
-# helium-crypto = { git = "https://github.com/helium/helium-crypto-rs", features = ["ecc608"]}
-helium-crypto = { path = "../helium-crypto-rs", features = ["ecc608"]}
+helium-crypto = { git = "ssh://git@github.com/iotpi-helium/helium-crypto-rs.git", branch = "trustzone", features = ["ecc608"]}
 longfi = { git = "https://github.com/helium/longfi-rs", branch = "main" }
 
 [features]
