@@ -1,9 +1,18 @@
 use crate::*;
-use helium_crypto::{ecc608, tee, KeyTag, KeyType, Network};
+#[cfg(feature = "ecc608")]
+use helium_crypto::ecc608;
+#[cfg(feature = "tee")]
+use helium_crypto::tee;
+#[cfg(feature = "tpm")]
+use helium_crypto::tpm;
+
+use helium_crypto::{KeyTag, KeyType, Network};
 use http::Uri;
 use rand::rngs::OsRng;
 use serde::{de, Deserializer};
-use std::{collections::HashMap, convert::TryFrom, fmt, fs, io, path, path::Path, str::FromStr};
+#[cfg(feature = "ecc608")]
+use std::path::Path;
+use std::{collections::HashMap, convert::TryFrom, fmt, fs, io, path, str::FromStr};
 
 #[derive(Debug)]
 pub struct Keypair(helium_crypto::Keypair);
@@ -67,6 +76,7 @@ impl FromStr for Keypair {
                     url.path()
                 )),
             },
+            #[cfg(feature = "ecc608")]
             Some("ecc") => {
                 let args = KeypairArgs::from_uri(&url).map_err(error::DecodeError::keypair_uri)?;
 
@@ -93,9 +103,23 @@ impl FromStr for Keypair {
                     })?;
                 Ok(keypair.into())
             }
+            #[cfg(feature = "tee")]
             Some("tz") => {
                 let keypair = tee::Keypair::keypair();
                 let keypair = helium_crypto::Keypair::from(keypair);
+                Ok(keypair.into())
+            }
+            #[cfg(feature = "tpm")]
+            Some("tpm") => {
+                let args = KeypairArgs::from_uri(&url).map_err(error::DecodeError::keypair_uri)?;
+                let network = args.get("network", Network::MainNet)?;
+                let path = url.path();
+
+                let keypair = tpm::Keypair::from_key_path(network, path)
+                    .map(helium_crypto::Keypair::from)
+                    .map_err(|err| {
+                        uri_error!("could not load tpm keypair on path {path}: {err:?}")
+                    })?;
                 Ok(keypair.into())
             }
             Some(unknown) => Err(uri_error!("unkown keypair scheme: \"{unknown}\"")),

@@ -30,7 +30,7 @@ pub const STATE_CHANNEL_CONNECT_INTERVAL: Duration = Duration::from_secs(60);
 #[derive(Debug)]
 pub enum Message {
     Uplink(Packet),
-    Region(Region),
+    RegionChanged(Region),
     GatewayChanged(Option<GatewayService>),
     Stop,
 }
@@ -50,7 +50,7 @@ impl MessageSender {
     }
 
     pub async fn region_changed(&self, region: Region) {
-        let _ = self.0.send(Message::Region(region)).await;
+        let _ = self.0.send(Message::RegionChanged(region)).await;
     }
 
     pub async fn uplink(&self, packet: Packet) -> Result {
@@ -148,7 +148,7 @@ impl RouterClient {
                     Some(Message::GatewayChanged(gateway)) => {
                         info!(logger, "gateway changed");
                         self.gateway = gateway;
-                        match self.state_channel_follower.set_gateway(self.gateway.as_mut()).await {
+                        match self.state_channel_follower.set_gateway(self.gateway.clone()).await {
                             Ok(()) => (),
                             Err(err) => {
                                 warn!(logger, "ignoring gateway service setup error: {err:?}");
@@ -156,9 +156,10 @@ impl RouterClient {
                             }
                         }
                     },
-                    Some(Message::Region(region)) => {
+                    Some(Message::RegionChanged(region)) => {
                         self.region = region;
-                        info!(logger, "updated region to {region}" );
+                        info!(logger, "updated region";
+                            "region" => region);
                     },
                     Some(Message::Stop) => {
                         info!(logger, "stop requested, shutting down");
@@ -355,7 +356,7 @@ impl RouterClient {
                             info!(logger, "accepting new state channel";
                                     "sc_id" => sc.id().to_b64url());
                             self.state_channel_follower
-                                .send(sc.id(), sc.owner())
+                                .send(sc.id(), sc.owner(), logger)
                                 .await?;
                             self.store.store_state_channel(sc)?;
                             let _ = self
@@ -495,7 +496,7 @@ impl RouterClient {
         StateChannelMessage::offer(
             packet.packet().clone(),
             self.keypair.clone(),
-            self.region,
+            &self.region,
             !first_offer,
         )
         .and_then(|message| self.state_channel.send(message.to_message()))
@@ -512,7 +513,7 @@ impl RouterClient {
         StateChannelMessage::packet(
             packet.packet().clone(),
             self.keypair.clone(),
-            self.region,
+            &self.region,
             packet.hold_time().as_millis() as u64,
         )
         .and_then(|message| self.state_channel.send(message.to_message()))

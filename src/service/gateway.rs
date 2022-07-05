@@ -1,6 +1,6 @@
 use crate::{
     service::{CONNECT_TIMEOUT, RPC_TIMEOUT},
-    Error, KeyedUri, Keypair, MsgSign, MsgVerify, PublicKey, Region, Result,
+    Error, KeyedUri, Keypair, MsgSign, MsgVerify, PublicKey, RegionParams, Result,
 };
 use helium_proto::{
     gateway_resp_v1,
@@ -12,6 +12,7 @@ use helium_proto::{
     GatewayVersionRespV1, Routing,
 };
 use rand::{rngs::OsRng, seq::SliceRandom};
+use slog::{info, Logger};
 use std::{
     pin::Pin,
     sync::Arc,
@@ -48,7 +49,7 @@ impl Stream for Streaming {
 pub(crate) trait Response {
     fn height(&self) -> u64;
     fn routings(&self) -> Result<&[Routing]>;
-    fn region(&self) -> Result<Region>;
+    fn region_params(&self) -> Result<RegionParams>;
     fn state_channel_response(&self) -> Result<&GatewayScFollowStreamedRespV1>;
 }
 
@@ -66,10 +67,10 @@ impl Response for GatewayRespV1 {
         }
     }
 
-    fn region(&self) -> Result<Region> {
+    fn region_params(&self) -> Result<RegionParams> {
         match &self.msg {
             Some(gateway_resp_v1::Msg::RegionParamsStreamedResp(params)) => {
-                Region::from_i32(params.region)
+                RegionParams::try_from(params.to_owned())
             }
             msg => Err(Error::custom(
                 format!("Unexpected gateway message {msg:?}",),
@@ -89,18 +90,24 @@ impl Response for GatewayRespV1 {
 
 #[derive(Debug)]
 pub struct StateChannelFollowService {
+    gateway: Option<GatewayService>,
     tx: Option<mpsc::Sender<GatewayScFollowReqV1>>,
     rx: Option<Streaming>,
 }
 
 impl StateChannelFollowService {
-    pub async fn new(gateway: &mut GatewayService) -> Result<Self> {
-        let mut result = Self { tx: None, rx: None };
+    pub async fn new(gateway: GatewayService) -> Result<Self> {
+        let mut result = Self {
+            tx: None,
+            rx: None,
+            gateway: None,
+        };
         result.set_gateway(Some(gateway)).await?;
         Ok(result)
     }
 
-    pub async fn send(&mut self, id: &[u8], owner: &[u8]) -> Result {
+    pub async fn send(&mut self, id: &[u8], owner: &[u8], logger: &Logger) -> Result {
+        self.connect(logger).await?;
         match self.tx.as_mut() {
             Some(tx) => {
                 let msg = GatewayScFollowReqV1 {
@@ -113,9 +120,13 @@ impl StateChannelFollowService {
         }
     }
 
-    pub async fn set_gateway(&mut self, gateway: Option<&mut GatewayService>) -> Result {
-        let (tx, rx) = match gateway {
+    pub async fn connect(&mut self, logger: &Logger) -> Result {
+        if self.tx.is_some() {
+            return Ok(());
+        }
+        match self.gateway.as_mut() {
             Some(gateway) => {
+                info!(logger, "connecting to gateway state channel updates");
                 let (tx, client_rx) = mpsc::channel(3);
                 let streaming = gateway
                     .client
@@ -126,12 +137,18 @@ impl StateChannelFollowService {
                     streaming,
                     verifier: gateway.uri.pubkey.clone(),
                 };
-                (Some(tx), Some(rx))
+                self.tx = Some(tx);
+                self.rx = Some(rx);
+                Ok(())
             }
-            None => (None, None),
-        };
-        self.tx = tx;
-        self.rx = rx;
+            None => Err(Error::no_service()),
+        }
+    }
+
+    pub async fn set_gateway(&mut self, gateway: Option<GatewayService>) -> Result {
+        self.gateway = gateway;
+        self.tx = None;
+        self.rx = None;
         Ok(())
     }
 }
@@ -246,7 +263,7 @@ impl GatewayService {
     }
 
     pub async fn follow_sc(&mut self) -> Result<StateChannelFollowService> {
-        StateChannelFollowService::new(self).await
+        StateChannelFollowService::new(self.clone()).await
     }
 
     pub async fn close_sc(&mut self, close_txn: BlockchainTxnStateChannelCloseV1) -> Result {
