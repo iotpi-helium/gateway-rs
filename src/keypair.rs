@@ -105,7 +105,10 @@ impl FromStr for Keypair {
             }
             #[cfg(feature = "tee")]
             Some("tz") => {
-                let keypair = tee::Keypair::keypair();
+                let args = KeypairArgs::from_uri(&url).map_err(error::DecodeError::keypair_uri)?;
+                let slot = args.get::<u8>("slot", 0)?;
+                let network = args.get("network", Network::MainNet)?;
+                let keypair = tee::Keypair::keypair(slot, network)?;
                 let keypair = helium_crypto::Keypair::from(keypair);
                 Ok(keypair.into())
             }

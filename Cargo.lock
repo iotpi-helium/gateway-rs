@@ -180,29 +180,6 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "bindgen"
-version = "0.59.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bd2a9a458e8f4304c52c43ebb0cfbd520289f8379a52e329a38afda99bf8eb8"
-dependencies = [
- "bitflags",
- "cexpr",
- "clang-sys",
- "clap 2.34.0",
- "env_logger",
- "lazy_static",
- "lazycell",
- "log",
- "peeking_take_while",
- "proc-macro2",
- "quote",
- "regex",
- "rustc-hash",
- "shlex",
- "which",
-]
-
-[[package]]
-name = "bindgen"
 version = "0.60.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "062dddbc1ba4aca46de6338e2bf87771414c335f7b2f2036e8f3e9befebf88e6"
@@ -892,7 +869,7 @@ checksum = "2540771e65fc8cb83cd6e8a237f70c319bd5c29f78ed1084ba5d50eeac86f7f9"
 [[package]]
 name = "helium-crypto"
 version = "0.4.1"
-source = "git+ssh://git@github.com/iotpi-helium/helium-crypto-rs.git?branch=trustzone#2aa7e277542086e6bfd17b898e9d1992e43ba4ae"
+source = "git+ssh://git@github.com/iotpi-helium/helium-crypto-rs.git?branch=trustzone#fa2109100467661981bff930b2faa21d8271e3b7"
 dependencies = [
  "base64",
  "bs58",
@@ -905,7 +882,7 @@ dependencies = [
  "p256",
  "rand_core 0.6.3",
  "serde",
- "sha2 0.9.9",
+ "sha2 0.10.2",
  "signature",
  "thiserror",
  "tss2",
@@ -1081,9 +1058,9 @@ dependencies = [
 [[package]]
 name = "iotpi-helium-optee"
 version = "0.1.0"
-source = "git+ssh://git@github.com/iotpi-helium/iotpi-helium-optee-rs.git?branch=master#e35c8a3e964697d31dc874799738b9995a5d8cd3"
+source = "git+ssh://git@github.com/iotpi-helium/iotpi-helium-optee-rs.git?branch=master#c9cba620e52f4c5108003a6bafbc25613be505c8"
 dependencies = [
- "bindgen 0.60.1",
+ "bindgen",
  "bytes",
  "cc",
  "libc",
@@ -2345,7 +2322,7 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87634a27e7fdeb495e0a84ea3c471932263bb10519fc81d56fb748be7c471a59"
 dependencies = [
- "bindgen 0.59.2",
+ "bindgen",
 ]
 
 [[package]]
